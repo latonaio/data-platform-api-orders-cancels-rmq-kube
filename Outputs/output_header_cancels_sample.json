@@ -1,1 +1,64 @@
-./gitignore
+{
+  "connection_key": "requests",
+  "result": true,
+  "redis_key": "abcdefg",
+  "filepath": "/var/lib/aion/Data/rededge_sdc/abcdef.json",
+  "api_status_code": 200,
+  "runtime_session_id": "boi9ar543dg91ipdnspi099u231280ab0v8af0ew",
+  "business_partner": 101,
+  "service_label": "FUNCTION_ORDERS_CANCELS",
+  "api_type": "cancels",
+  "message": {
+    "Header": {
+      "OrderID": 4,
+      "HeaderDeliveryStatus": null,
+      "IsCancelled": true,
+      "HeaderIsDeleted": null
+    },
+    "Item": [
+      {
+        "OrderID": 4,
+        "OrderItem": 1,
+        "ItemDeliveryStatus": null,
+        "IsCancelled": true,
+        "ItemIsDeleted": null
+      },
+      {
+        "OrderID": 4,
+        "OrderItem": 2,
+        "ItemDeliveryStatus": null,
+        "IsCancelled": true,
+        "ItemIsDeleted": null
+      }
+    ],
+    "ScheduleLine": [
+      {
+        "OrderID": 4,
+        "OrderItem": 1,
+        "ScheduleLine": 1,
+        "IsCancelled": true,
+        "IsMarkedForDeletion": null
+      },
+      {
+        "OrderID": 4,
+        "OrderItem": 2,
+        "ScheduleLine": 2,
+        "IsCancelled": true,
+        "IsMarkedForDeletion": null
+      }
+    ]
+  },
+  "api_schema": "DPFMOrdersCancels",
+  "accepter": [
+    "Header"
+  ],
+  "deleted": false,
+  "sql_update_result": null,
+  "sql_update_error": "",
+  "subfunc_result": null,
+  "subfunc_error": "",
+  "exconf_result": null,
+  "exconf_error": "",
+  "api_processing_result": true,
+  "api_processing_error": ""
+}

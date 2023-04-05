@@ -4,6 +4,6 @@ type Item struct {
 	OrderID            int     `json:"OrderID"`
 	OrderItem          int     `json:"OrderItem"`
 	ItemDeliveryStatus *string `json:"ItemDeliveryStatus"`
-	ItemIsCancelled    *bool   `json:"ItemIsCancelled"`
+	IsCancelled        *bool   `json:"IsCancelled"`
 	ItemIsDeleted      *bool   `json:"ItemIsDeleted"`
 }

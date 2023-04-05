@@ -1,0 +1,25 @@
+{
+	"connection_key": "requests",
+	"result": true,
+	"redis_key": "abcdefg",
+	"filepath": "/var/lib/aion/Data/rededge_sdc/abcdef.json",
+	"api_status_code": 200,
+	"runtime_session_id": "boi9ar543dg91ipdnspi099u231280ab0v8af0ew",
+	"business_partner": 101,
+	"service_label": "FUNCTION_ORDERS_CANCELS",
+	"api_type": "cancels",
+	"Orders": {
+		"OrderID": 4,
+		"Item": [
+			{
+				"OrderItem": 1,
+				"IsCancelled": true
+			}
+		]
+	},
+	"api_schema": "DPFMOrdersCancels",
+	"accepter": [
+		"Item"
+	],
+	"deleted": false
+}

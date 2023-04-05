@@ -3,6 +3,6 @@ package requests
 type Header struct {
 	OrderID              int     `json:"OrderID"`
 	HeaderDeliveryStatus *string `json:"HeaderDeliveryStatus"`
-	HeaderIsCancelled    *bool   `json:"HeaderIsCancelled"`
+	IsCancelled          *bool   `json:"IsCancelled"`
 	HeaderIsDeleted      *bool   `json:"HeaderIsDeleted"`
 }

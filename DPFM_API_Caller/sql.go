@@ -1,115 +1,92 @@
 package dpfm_api_caller
 
 import (
-	"context"
 	dpfm_api_input_reader "data-platform-api-orders-cancels-rmq-kube/DPFM_API_Input_Reader"
 	dpfm_api_output_formatter "data-platform-api-orders-cancels-rmq-kube/DPFM_API_Output_Formatter"
-	"data-platform-api-orders-cancels-rmq-kube/sub_func_complementer"
-	"sync"
+
+	"fmt"
 
 	"github.com/latonaio/golang-logging-library-for-data-platform/logger"
-	"golang.org/x/xerrors"
 )
 
-func (c *DPFMAPICaller) cancelSqlProcess(
-	ctx context.Context,
-	mtx *sync.Mutex,
+func (c *DPFMAPICaller) HeaderRead(
 	input *dpfm_api_input_reader.SDC,
-	output *dpfm_api_output_formatter.SDC,
-	subfuncSDC *sub_func_complementer.SDC,
-	accepter []string,
-	errs *[]error,
 	log *logger.Logger,
-) interface{} {
-	var header *dpfm_api_output_formatter.Header
-	var item *[]dpfm_api_output_formatter.Item
-	for _, fn := range accepter {
-		switch fn {
-		case "Header":
-			c.headerCancelSql(nil, mtx, input, output, subfuncSDC, errs, log)
-			header = dpfm_api_output_formatter.ConvertToHeader(subfuncSDC)
-		case "Item":
-			c.itemCancelSql(nil, mtx, input, output, subfuncSDC, errs, log)
-			item = dpfm_api_output_formatter.ConvertToItem(subfuncSDC)
-		default:
-
-		}
+) *dpfm_api_output_formatter.Header {
+	where := fmt.Sprintf("WHERE header.OrderID = %d ", input.Orders.OrderID)
+	where = fmt.Sprintf("%s \n AND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
+	where = fmt.Sprintf("%s \n AND ( header.HeaderDeliveryStatus, header.IsCancelled, header.IsMarkedForDeletion ) = ( 'NP', false, false ) ", where)
+	rows, err := c.db.Query(
+		`SELECT 
+			header.OrderID
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_header_data as header ` + where + ` ;`)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
 	}
+	defer rows.Close()
 
-	data := &dpfm_api_output_formatter.Message{
-		Header: header,
-		Item:   item,
+	data, err := dpfm_api_output_formatter.ConvertToHeader(rows)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
 	}
 
 	return data
 }
 
-func (c *DPFMAPICaller) headerCancelSql(
-	ctx context.Context,
-	mtx *sync.Mutex,
+func (c *DPFMAPICaller) ItemsRead(
 	input *dpfm_api_input_reader.SDC,
-	output *dpfm_api_output_formatter.SDC,
-	subfuncSDC *sub_func_complementer.SDC,
-	errs *[]error,
 	log *logger.Logger,
-) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	sessionID := input.RuntimeSessionID
-	// data_platform_orders_header_dataの更新
-	headerData := subfuncSDC.Message.Header
-	res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": headerData, "function": "OrdersHeader", "runtime_session_id": sessionID})
+) *[]dpfm_api_output_formatter.Item {
+	where := fmt.Sprintf("WHERE item.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Orders.OrderID)
+	where = fmt.Sprintf("%s\nAND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
+	where = fmt.Sprintf("%s\nAND ( item.ItemDeliveryStatus, item.IsCancelled, item.IsMarkedForDeletion) = ('NP', false, false) ", where)
+	rows, err := c.db.Query(
+		`SELECT 
+			item.OrderID, item.OrderItem
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_item_data as item
+		INNER JOIN DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_header_data as header
+		ON header.OrderID = item.OrderID ` + where + ` ;`)
 	if err != nil {
-		err = xerrors.Errorf("rmq error: %w", err)
-		return
+		log.Error("%+v", err)
+		return nil
 	}
-	res.Success()
-	if !checkResult(res) {
-		// err = xerrors.New("Header Data cannot insert")
-		output.SQLUpdateResult = getBoolPtr(false)
-		output.SQLUpdateError = "Header Data cannot insert"
-		return
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToItem(rows)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
 	}
 
-	if output.SQLUpdateResult == nil {
-		output.SQLUpdateResult = getBoolPtr(true)
-	}
-
-	return
+	return data
 }
 
-func (c *DPFMAPICaller) itemCancelSql(
-	ctx context.Context,
-	mtx *sync.Mutex,
+func (c *DPFMAPICaller) ScheduleLineRead(
 	input *dpfm_api_input_reader.SDC,
-	output *dpfm_api_output_formatter.SDC,
-	subfuncSDC *sub_func_complementer.SDC,
-	errs *[]error,
 	log *logger.Logger,
-) {
-	if ctx == nil {
-		ctx = context.Background()
+) *[]dpfm_api_output_formatter.ScheduleLine {
+	where := fmt.Sprintf("WHERE schedule.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Orders.OrderID)
+	where = fmt.Sprintf("%s\nAND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
+	where = fmt.Sprintf("%s\nAND (schedule.IsCancelled, schedule.IsMarkedForDeletion) = (false, false) ", where)
+	rows, err := c.db.Query(
+		`SELECT 
+			schedule.OrderID, schedule.OrderItem, schedule.ScheduleLine
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_item_schedule_line_data as schedule
+		INNER JOIN DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_header_data as header
+		ON header.OrderID = schedule.OrderID ` + where + ` ;`)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
 	}
-	sessionID := input.RuntimeSessionID
-	// data_platform_orders_item_dataの更新
-	for _, itemData := range *subfuncSDC.Message.Item {
-		res, err := c.rmq.SessionKeepRequest(ctx, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": itemData, "function": "OrdersItem", "runtime_session_id": sessionID})
-		if err != nil {
-			err = xerrors.Errorf("rmq error: %w", err)
-			return
-		}
-		res.Success()
-		if !checkResult(res) {
-			// err = xerrors.New("Item Data cannot insert")
-			output.SQLUpdateResult = getBoolPtr(false)
-			output.SQLUpdateError = "Item Data cannot insert"
-			return
-		}
+	defer rows.Close()
+
+	data, err := dpfm_api_output_formatter.ConvertToSchedule(rows)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
 	}
 
-	if output.SQLUpdateResult == nil {
-		output.SQLUpdateResult = getBoolPtr(true)
-	}
-	return
+	return data
 }

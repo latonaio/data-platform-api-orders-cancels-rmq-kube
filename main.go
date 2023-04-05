@@ -1,24 +1,26 @@
 package main
 
 import (
-	"context"
 	dpfm_api_caller "data-platform-api-orders-cancels-rmq-kube/DPFM_API_Caller"
 	dpfm_api_input_reader "data-platform-api-orders-cancels-rmq-kube/DPFM_API_Input_Reader"
 	dpfm_api_output_formatter "data-platform-api-orders-cancels-rmq-kube/DPFM_API_Output_Formatter"
 	"data-platform-api-orders-cancels-rmq-kube/config"
-	"data-platform-api-orders-cancels-rmq-kube/sub_func_complementer"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/latonaio/golang-logging-library-for-data-platform/logger"
+	database "github.com/latonaio/golang-mysql-network-connector"
 	rabbitmq "github.com/latonaio/rabbitmq-golang-client-for-data-platform"
 )
 
 func main() {
-	ctx := context.Background()
 	l := logger.NewLogger()
 	conf := config.NewConf()
+	db, err := database.NewMySQL(conf.DB)
+	if err != nil {
+		l.Fatal(err.Error())
+	}
 	rmq, err := rabbitmq.NewRabbitmqClient(conf.RMQ.URL(), conf.RMQ.QueueFrom(), conf.RMQ.SessionControlQueue(), conf.RMQ.QueueToSQL(), 0)
 	if err != nil {
 		l.Fatal(err.Error())
@@ -30,8 +32,7 @@ func main() {
 	}
 	defer rmq.Stop()
 
-	complementer := sub_func_complementer.NewSubFuncComplementer(ctx, conf, rmq)
-	caller := dpfm_api_caller.NewDPFMAPICaller(conf, rmq, complementer)
+	caller := dpfm_api_caller.NewDPFMAPICaller(conf, rmq, db)
 
 	for msg := range iter {
 		start := time.Now()
@@ -105,7 +106,7 @@ func getAccepter(input *dpfm_api_input_reader.SDC) []string {
 
 	if accepter[0] == "All" {
 		accepter = []string{
-			"Header", "Item",
+			"Header", "Item", "ScheduleLine",
 		}
 	}
 	return accepter
