@@ -23,7 +23,7 @@ func ConvertToHeader(rows *sql.Rows) (*Header, error) {
 	}
 	if i == 0 {
 		fmt.Printf("DBに対象のレコードが存在しません。")
-		return &header, nil
+		return nil, nil
 	}
 
 	return &header, nil
@@ -62,12 +62,20 @@ func ConvertToSchedule(rows *sql.Rows) (*[]ScheduleLine, error) {
 	i := 0
 
 	for rows.Next() {
-		i++
 		schedule := ScheduleLine{}
+		i++
 		err := rows.Scan(
 			&schedule.OrderID,
 			&schedule.OrderItem,
 			&schedule.ScheduleLine,
+			&schedule.Product,
+			&schedule.StockConfirmationBusinessPartner,
+			&schedule.StockConfirmationPlant,
+			&schedule.StockConfirmationPlantBatch,
+			&schedule.RequestedDeliveryDate,
+			&schedule.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit,
+			&schedule.IsCancelled,
+			&schedule.IsMarkedForDeletion,
 		)
 		if err != nil {
 			fmt.Printf("err = %+v \n", err)
@@ -82,4 +90,61 @@ func ConvertToSchedule(rows *sql.Rows) (*[]ScheduleLine, error) {
 	}
 
 	return &schedules, nil
+}
+
+func ConvertToProductStockAvailability(rows *sql.Rows) (*ProductStock, error) {
+	defer rows.Close()
+	productStock := ProductStock{}
+	i := 0
+
+	for rows.Next() {
+		i++
+		err := rows.Scan(
+			&productStock.Product,
+			&productStock.BusinessPartner,
+			&productStock.Plant,
+			&productStock.ProductStockAvailabilityDate,
+			&productStock.AvailableProductStock,
+		)
+		if err != nil {
+			fmt.Printf("err = %+v \n", err)
+			return &productStock, err
+		}
+
+	}
+	if i == 0 {
+		fmt.Printf("DBに対象のレコードが存在しません。")
+		return &productStock, nil
+	}
+
+	return &productStock, nil
+}
+
+func ConvertToProductStockAvailabilityByBatch(rows *sql.Rows) (*ProductStock, error) {
+	defer rows.Close()
+	productStock := ProductStock{}
+	i := 0
+
+	for rows.Next() {
+		i++
+		err := rows.Scan(
+			&productStock.Product,
+			&productStock.BusinessPartner,
+			&productStock.Plant,
+			&productStock.Batch,
+			&productStock.ProductStockAvailabilityDate,
+			&productStock.AvailableProductStock,
+		)
+		if err != nil {
+			fmt.Printf("err = %+v \n", err)
+			return &productStock, err
+		}
+
+	}
+	if i == 0 {
+		fmt.Printf("DBに対象のレコードが存在しません。")
+		return &productStock, nil
+	}
+
+	return &productStock, nil
 }

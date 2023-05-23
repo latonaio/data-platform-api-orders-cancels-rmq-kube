@@ -10,41 +10,40 @@
   "api_type": "cancels",
   "message": {
     "Header": {
-      "OrderID": 4,
+      "OrderID": 265,
       "HeaderDeliveryStatus": null,
-      "IsCancelled": true,
-      "HeaderIsDeleted": null
+      "IsCancelled": true
     },
     "Item": [
       {
-        "OrderID": 4,
+        "OrderID": 265,
         "OrderItem": 1,
         "ItemDeliveryStatus": null,
-        "IsCancelled": true,
-        "ItemIsDeleted": null
-      },
-      {
-        "OrderID": 4,
-        "OrderItem": 2,
-        "ItemDeliveryStatus": null,
-        "IsCancelled": true,
-        "ItemIsDeleted": null
+        "IsCancelled": true
       }
     ],
     "ScheduleLine": [
       {
-        "OrderID": 4,
+        "OrderID": 265,
         "OrderItem": 1,
         "ScheduleLine": 1,
+        "Product": "A3750",
+        "StockConfirmationBusinessPartner": 102,
+        "StockConfirmationPlant": "AB02",
+        "StockConfirmationPlantBatch": "A001",
+        "ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit": 20,
         "IsCancelled": true,
-        "IsMarkedForDeletion": null
-      },
+        "IsMarkedForDeletion": false
+      }
+    ],
+    "ProductStock": [
       {
-        "OrderID": 4,
-        "OrderItem": 2,
-        "ScheduleLine": 2,
-        "IsCancelled": true,
-        "IsMarkedForDeletion": null
+        "Product": "A3750",
+        "BusinessPartner": 102,
+        "Plant": "AB02",
+        "Batch": "A001",
+        "ProductStockAvailabilityDate": "2023-02-15",
+        "AvailableProductStock": 516
       }
     ]
   },

@@ -28,13 +28,13 @@ type Message struct {
 	Header       *Header         `json:"Header"`
 	Item         *[]Item         `json:"Item"`
 	ScheduleLine *[]ScheduleLine `json:"ScheduleLine"`
+	ProductStock *[]ProductStock `json:"ProductStock"`
 }
 
 type Header struct {
 	OrderID              int     `json:"OrderID"`
 	HeaderDeliveryStatus *string `json:"HeaderDeliveryStatus"`
 	IsCancelled          *bool   `json:"IsCancelled"`
-	HeaderIsDeleted      *bool   `json:"HeaderIsDeleted"`
 }
 
 type Item struct {
@@ -42,13 +42,27 @@ type Item struct {
 	OrderItem          int     `json:"OrderItem"`
 	ItemDeliveryStatus *string `json:"ItemDeliveryStatus"`
 	IsCancelled        *bool   `json:"IsCancelled"`
-	ItemIsDeleted      *bool   `json:"ItemIsDeleted"`
 }
 
 type ScheduleLine struct {
-	OrderID             int   `json:"OrderID"`
-	OrderItem           int   `json:"OrderItem"`
-	ScheduleLine        int   `json:"ScheduleLine"`
-	IsCancelled         *bool `json:"IsCancelled"`
-	IsMarkedForDeletion *bool `json:"IsMarkedForDeletion"`
+	OrderID                                         int     `json:"OrderID"`
+	OrderItem                                       int     `json:"OrderItem"`
+	ScheduleLine                                    int     `json:"ScheduleLine"`
+	Product                                         string  `json:"Product"`
+	StockConfirmationBusinessPartner                int     `json:"StockConfirmationBusinessPartner"`
+	StockConfirmationPlant                          string  `json:"StockConfirmationPlant"`
+	StockConfirmationPlantBatch                     *string `json:"StockConfirmationPlantBatch"`
+	RequestedDeliveryDate                           *string `json:"RequestedDeliveryDate"`
+	ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit float32 `json:"ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit"`
+	IsCancelled                                     *bool   `json:"IsCancelled"`
+	IsMarkedForDeletion                             *bool   `json:"IsMarkedForDeletion"`
+}
+
+type ProductStock struct {
+	Product                      string  `json:"Product"`
+	BusinessPartner              int     `json:"BusinessPartner"`
+	Plant                        string  `json:"Plant"`
+	Batch                        string  `json:"Batch"`
+	ProductStockAvailabilityDate string  `json:"ProductStockAvailabilityDate"`
+	AvailableProductStock        float32 `json:"AvailableProductStock"`
 }
