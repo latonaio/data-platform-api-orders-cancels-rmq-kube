@@ -30,7 +30,7 @@ func NewDPFMAPICaller(
 	}
 }
 
-func (c *DPFMAPICaller) AsyncOrderCancels(
+func (c *DPFMAPICaller) AsyncCancels(
 	accepter []string,
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,

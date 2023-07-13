@@ -35,10 +35,8 @@ accepter において 下記の例のように、データの種別（＝APIの�
 ここでは、"Header" が指定されています。    
   
 ```
-	"api_schema": "DPFMOrdersCreates",
+	"api_schema": "DPFMOrdersCancels",
 	"accepter": ["Header"],
-	"order_id": null,
-	"deleted": false
 ```
   
 * 全データを取得する際のsample.jsonの記載例(2)  
@@ -46,10 +44,8 @@ accepter において 下記の例のように、データの種別（＝APIの�
 全データを取得する場合、sample.json は以下のように記載します。  
 
 ```
-	"api_schema": "DPFMOrdersCreates",
+	"api_schema": "DPFMOrdersCancels",
 	"accepter": ["All"],
-	"order_id": null,
-	"deleted": false
 ```
 
 ## 指定されたデータ種別のコール
@@ -58,7 +54,7 @@ accepter における データ種別 の指定に基づいて DPFM_API_Caller �
 caller.go の func() 毎 の 以下の箇所が、指定された API をコールするソースコードです。  
 
 ```
-func (c *DPFMAPICaller) AsyncOrderCancels(
+func (c *DPFMAPICaller) AsyncCancels(
 	accepter []string,
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
