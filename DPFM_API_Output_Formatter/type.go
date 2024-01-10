@@ -25,10 +25,10 @@ type SDC struct {
 }
 
 type Message struct {
-	Header       *Header         `json:"Header"`
-	Item         *[]Item         `json:"Item"`
-	ScheduleLine *[]ScheduleLine `json:"ScheduleLine"`
-	ProductStock *[]ProductStock `json:"ProductStock"`
+	Header       		*Header         	`json:"Header"`
+	Item         		*[]Item         	`json:"Item"`
+	ItemScheduleLine	*[]ItemScheduleLine `json:"ItemScheduleLine"`
+	ProductStock 		*[]ProductStock 	`json:"ProductStock"`
 }
 
 type Header struct {
@@ -44,7 +44,7 @@ type Item struct {
 	IsCancelled        *bool   `json:"IsCancelled"`
 }
 
-type ScheduleLine struct {
+type ItemScheduleLine struct {
 	OrderID                                         int     `json:"OrderID"`
 	OrderItem                                       int     `json:"OrderItem"`
 	ScheduleLine                                    int     `json:"ScheduleLine"`
@@ -55,7 +55,6 @@ type ScheduleLine struct {
 	RequestedDeliveryDate                           *string `json:"RequestedDeliveryDate"`
 	ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit float32 `json:"ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit"`
 	IsCancelled                                     *bool   `json:"IsCancelled"`
-	IsMarkedForDeletion                             *bool   `json:"IsMarkedForDeletion"`
 }
 
 type ProductStock struct {

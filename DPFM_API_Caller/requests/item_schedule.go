@@ -1,6 +1,6 @@
 package requests
 
-type ScheduleLine struct {
+type ItemScheduleLine struct {
 	OrderID      int   `json:"OrderID"`
 	OrderItem    int   `json:"OrderItem"`
 	ScheduleLine int   `json:"ScheduleLine"`

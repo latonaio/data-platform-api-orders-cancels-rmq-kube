@@ -56,13 +56,13 @@ func ConvertToItem(rows *sql.Rows) (*[]Item, error) {
 	return &items, nil
 }
 
-func ConvertToSchedule(rows *sql.Rows) (*[]ScheduleLine, error) {
+func ConvertToItemScheduleLine(rows *sql.Rows) (*[]ItemScheduleLine, error) {
 	defer rows.Close()
-	schedules := make([]ScheduleLine, 0)
+	itemScheduleLines := make([]ItemScheduleLine, 0)
 	i := 0
 
 	for rows.Next() {
-		schedule := ScheduleLine{}
+		itemScheduleLine := ItemScheduleLine{}
 		i++
 		err := rows.Scan(
 			&schedule.OrderID,
@@ -82,14 +82,14 @@ func ConvertToSchedule(rows *sql.Rows) (*[]ScheduleLine, error) {
 			return &schedules, err
 		}
 
-		schedules = append(schedules, schedule)
+		itemScheduleLines = append(itemScheduleLines, itemScheduleLine)
 	}
 	if i == 0 {
 		fmt.Printf("DBに対象のレコードが存在しません。")
-		return &schedules, nil
+		return &itemScheduleLines, nil
 	}
 
-	return &schedules, nil
+	return &itemScheduleLines, nil
 }
 
 func ConvertToProductStockAvailability(rows *sql.Rows) (*ProductStock, error) {

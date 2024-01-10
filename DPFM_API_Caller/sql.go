@@ -13,9 +13,9 @@ func (c *DPFMAPICaller) HeaderRead(
 	input *dpfm_api_input_reader.SDC,
 	log *logger.Logger,
 ) *dpfm_api_output_formatter.Header {
-	where := fmt.Sprintf("WHERE header.OrderID = %d ", input.Orders.OrderID)
-	if input.Orders.HeaderDeliveryStatus != nil {
-		where = fmt.Sprintf("%s \n AND HeaderDeliveryStatus = %s ", where, *input.Orders.HeaderDeliveryStatus)
+	where := fmt.Sprintf("WHERE header.OrderID = %d ", input.Header.OrderID)
+	if input.Header.HeaderDeliveryStatus != nil {
+		where = fmt.Sprintf("%s \n AND HeaderDeliveryStatus = %s ", where, *input.Header.HeaderDeliveryStatus)
 	}
 	where = fmt.Sprintf("%s \n AND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
 	rows, err := c.db.Query(
@@ -41,7 +41,7 @@ func (c *DPFMAPICaller) ItemsRead(
 	input *dpfm_api_input_reader.SDC,
 	log *logger.Logger,
 ) *[]dpfm_api_output_formatter.Item {
-	where := fmt.Sprintf("WHERE item.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Orders.OrderID)
+	where := fmt.Sprintf("WHERE item.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Header.OrderID)
 	where = fmt.Sprintf("%s\nAND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
 	rows, err := c.db.Query(
 		`SELECT 
@@ -64,27 +64,27 @@ func (c *DPFMAPICaller) ItemsRead(
 	return data
 }
 
-func (c *DPFMAPICaller) ScheduleLineRead(
+func (c *DPFMAPICaller) ItemScheduleLineRead(
 	input *dpfm_api_input_reader.SDC,
 	log *logger.Logger,
-) *[]dpfm_api_output_formatter.ScheduleLine {
-	where := fmt.Sprintf("WHERE schedule.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Orders.OrderID)
+) *[]dpfm_api_output_formatter.ItemScheduleLine {
+	where := fmt.Sprintf("WHERE schedule.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Header.OrderID)
 	where = fmt.Sprintf("%s\nAND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
 	rows, err := c.db.Query(
 		`SELECT 
-			schedule.OrderID, schedule.OrderItem, schedule.ScheduleLine, schedule.Product, schedule.StockConfirmationBusinessPartner,
-			schedule.StockConfirmationPlant, schedule.StockConfirmationPlantBatch, schedule.RequestedDeliveryDate,
-			schedule.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit,	schedule.IsCancelled, schedule.IsMarkedForDeletion
-		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_item_schedule_line_data as schedule
+			itemScheduleLine.OrderID, itemScheduleLine.OrderItem, itemScheduleLine.ScheduleLine, itemScheduleLine.Product, itemScheduleLine.StockConfirmationBusinessPartner,
+			itemScheduleLine.StockConfirmationPlant, itemScheduleLine.StockConfirmationPlantBatch, itemScheduleLine.RequestedDeliveryDate,
+			itemScheduleLine.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit,	itemScheduleLine.IsCancelled, itemScheduleLine.IsMarkedForDeletion
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_item_schedule_line_data as itemScheduleLine
 		INNER JOIN DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_header_data as header
-		ON header.OrderID = schedule.OrderID ` + where + ` ;`)
+		ON header.OrderID = itemScheduleLine.OrderID ` + where + ` ;`)
 	if err != nil {
 		log.Error("%+v", err)
 		return nil
 	}
 	defer rows.Close()
 
-	data, err := dpfm_api_output_formatter.ConvertToSchedule(rows)
+	data, err := dpfm_api_output_formatter.ConvertToItemScheduleLine(rows)
 	if err != nil {
 		log.Error("%+v", err)
 		return nil
@@ -94,12 +94,12 @@ func (c *DPFMAPICaller) ScheduleLineRead(
 }
 
 func (c *DPFMAPICaller) ProductStockAvailabilityRead(
-	schedule dpfm_api_output_formatter.ScheduleLine,
+	itemScheduleLine dpfm_api_output_formatter.ItemScheduleLine,
 	log *logger.Logger,
 ) *dpfm_api_output_formatter.ProductStock {
 	args := make([]interface{}, 0)
 
-	args = append(args, schedule.Product, schedule.StockConfirmationBusinessPartner, schedule.StockConfirmationPlant, schedule.RequestedDeliveryDate)
+	args = append(args, itemScheduleLine.Product, itemScheduleLine.StockConfirmationBusinessPartner, itemScheduleLine.StockConfirmationPlant, itemScheduleLine.RequestedDeliveryDate)
 
 	rows, err := c.db.Query(
 		`SELECT Product, BusinessPartner, Plant, ProductStockAvailabilityDate, AvailableProductStock
@@ -122,12 +122,12 @@ func (c *DPFMAPICaller) ProductStockAvailabilityRead(
 }
 
 func (c *DPFMAPICaller) ProductStockAvailabilityByBatchRead(
-	schedule dpfm_api_output_formatter.ScheduleLine,
+	itemScheduleLine dpfm_api_output_formatter.ItemScheduleLine,
 	log *logger.Logger,
 ) *dpfm_api_output_formatter.ProductStock {
 	args := make([]interface{}, 0)
 
-	args = append(args, schedule.Product, schedule.StockConfirmationBusinessPartner, schedule.StockConfirmationPlant, *schedule.StockConfirmationPlantBatch, schedule.RequestedDeliveryDate)
+	args = append(args, itemScheduleLine.Product, itemScheduleLine.StockConfirmationBusinessPartner, itemScheduleLine.StockConfirmationPlant, *itemScheduleLine.StockConfirmationPlantBatch, itemScheduleLine.RequestedDeliveryDate)
 
 	rows, err := c.db.Query(
 		`SELECT Product, BusinessPartner, Plant, Batch, ProductStockAvailabilityDate, AvailableProductStock

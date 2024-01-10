@@ -63,24 +63,30 @@ type SDC struct {
 	BusinessPartner  int      `json:"business_partner"`
 	ServiceLabel     string   `json:"service_label"`
 	APIType          string   `json:"api_type"`
-	Orders           Orders   `json:"Orders"`
+	Header           Header   `json:"Orders"`
 	APISchema        string   `json:"api_schema"`
 	Accepter         []string `json:"accepter"`
 	Deleted          bool     `json:"deleted"`
 }
-type Orders struct {
-	OrderID              int     `json:"OrderID"`
-	HeaderDeliveryStatus *string `json:"HeaderDeliveryStatus"`
-	IsCancelled          *bool   `json:"IsCancelled"`
-	Item                 []Item  `json:"Item"`
+
+type Header struct {
+	OrderID             	int     `json:"OrderID"`
+	HeaderDeliveryStatus	*string `json:"HeaderDeliveryStatus"`
+	IsCancelled          	*bool   `json:"IsCancelled"`
+	Item                 	[]Item  `json:"Item"`
 }
+
 type Item struct {
-	OrderItem          int                  `json:"OrderItem"`
-	ItemDeliveryStatus *string              `json:"ItemDeliveryStatus"`
-	IsCancelled        *bool                `json:"IsCancelled"`
-	ItemSchedulingLine []ItemSchedulingLine `json:"ItemSchedulingLine"`
+	OrderID            		int     			`json:"OrderID"`
+	OrderItem          		int                 `json:"OrderItem"`
+	ItemDeliveryStatus 		*string             `json:"ItemDeliveryStatus"`
+	IsCancelled        		*bool               `json:"IsCancelled"`
+	ItemScheduleLine   		[]ItemScheduleLine	`json:"ItemScheduleLine"`
 }
-type ItemSchedulingLine struct {
-	ScheduleLine int   `json:"ScheduleLine"`
-	IsCancelled  *bool `json:"IsCancelled"`
+
+type ItemScheduleLine struct {
+	OrderID            		int     			`json:"OrderID"`
+	OrderItem          		int                 `json:"OrderItem"`
+	ScheduleLine 			int   				`json:"ScheduleLine"`
+	IsCancelled  			*bool 				`json:"IsCancelled"`
 }

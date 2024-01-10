@@ -54,7 +54,7 @@ func (c *DPFMAPICaller) cancelSqlProcess(
 ) *dpfm_api_output_formatter.Message {
 	var headerData *dpfm_api_output_formatter.Header
 	itemData := make([]dpfm_api_output_formatter.Item, 0)
-	scheduleData := make([]dpfm_api_output_formatter.ScheduleLine, 0)
+	itemScheduleLineData := make([]dpfm_api_output_formatter.ItemScheduleLine, 0)
 	productStockData := make([]dpfm_api_output_formatter.ProductStock, 0)
 	for _, a := range accepter {
 		switch a {
@@ -65,7 +65,7 @@ func (c *DPFMAPICaller) cancelSqlProcess(
 				continue
 			}
 			itemData = append(itemData, *i...)
-			scheduleData = append(scheduleData, *s...)
+			itemScheduleLineData = append(itemScheduleLineData, *s...)
 			productStockData = append(productStockData, *p...)
 		case "Item":
 			i, s, p := c.itemCancel(input, output, log)
@@ -73,22 +73,22 @@ func (c *DPFMAPICaller) cancelSqlProcess(
 				continue
 			}
 			itemData = append(itemData, *i...)
-			scheduleData = append(scheduleData, *s...)
+			itemScheduleLineData = append(itemScheduleLineData, *s...)
 			productStockData = append(productStockData, *p...)
-		case "Schedule":
-			s := c.scheduleCancel(input, output, log)
+		case "ItemScheduleLine":
+			s := c.itemScheduleLineCancel(input, output, log)
 			if s == nil {
 				continue
 			}
-			scheduleData = append(scheduleData, *s...)
+			itemScheduleLineData = append(itemScheduleLineData, *s...)
 		}
 	}
 
 	return &dpfm_api_output_formatter.Message{
-		Header:       headerData,
-		Item:         &itemData,
-		ScheduleLine: &scheduleData,
-		ProductStock: &productStockData,
+		Header:       		headerData,
+		Item:         		&itemData,
+		ItemScheduleLine:	&itemScheduleLineData,
+		ProductStock: 		&productStockData,
 	}
 }
 
@@ -96,14 +96,14 @@ func (c *DPFMAPICaller) headerCancel(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-) (*dpfm_api_output_formatter.Header, *[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ScheduleLine, *[]dpfm_api_output_formatter.ProductStock) {
+) (*dpfm_api_output_formatter.Header, *[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ItemScheduleLine, *[]dpfm_api_output_formatter.ProductStock) {
 	sessionID := input.RuntimeSessionID
 
 	header := c.HeaderRead(input, log)
 	if header == nil {
 		return nil, nil, nil, nil
 	}
-	header.IsCancelled = input.Orders.IsCancelled
+	header.IsCancelled = input.Header.IsCancelled
 	res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": header, "function": "OrdersHeader", "runtime_session_id": sessionID})
 	if err != nil {
 		err = xerrors.Errorf("rmq error: %w", err)
@@ -123,7 +123,7 @@ func (c *DPFMAPICaller) headerCancel(
 
 	items := c.ItemsRead(input, log)
 	for i := range *items {
-		(*items)[i].IsCancelled = input.Orders.IsCancelled
+		(*items)[i].IsCancelled = input.Header.IsCancelled
 		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": (*items)[i], "function": "OrdersItem", "runtime_session_id": sessionID})
 		if err != nil {
 			err = xerrors.Errorf("rmq error: %w", err)
@@ -138,21 +138,21 @@ func (c *DPFMAPICaller) headerCancel(
 		}
 	}
 
-	schedules := c.ScheduleLineRead(input, log)
+	itemScheduleLines := c.ItemScheduleLineRead(input, log)
 	productStocks := make([]dpfm_api_output_formatter.ProductStock, 0)
-	for i := range *schedules {
+	for i := range *itemScheduleLines {
 		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := float32(0)
 		productStock := new(dpfm_api_output_formatter.ProductStock)
-		if *input.Orders.IsCancelled {
-			productStock, confirmedOrderQuantityByPDTAvailCheckInBaseUnit = c.releaseInventoryReservation(input, output, (*schedules)[i], log)
-		} else if !*input.Orders.IsCancelled {
-			productStock, confirmedOrderQuantityByPDTAvailCheckInBaseUnit = c.inventoryReservation(input, output, (*schedules)[i], log)
+		if *input.Header.IsCancelled {
+			productStock, confirmedOrderQuantityByPDTAvailCheckInBaseUnit = c.releaseInventoryReservation(input, output, (*itemScheduleLines)[i], log)
+		} else if !*input.Header.IsCancelled {
+			productStock, confirmedOrderQuantityByPDTAvailCheckInBaseUnit = c.inventoryReservation(input, output, (*itemScheduleLines)[i], log)
 		}
 		productStocks = append(productStocks, *productStock)
 
-		(*schedules)[i].ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit = confirmedOrderQuantityByPDTAvailCheckInBaseUnit
-		(*schedules)[i].IsCancelled = input.Orders.IsCancelled
-		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": (*schedules)[i], "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
+		(*itemScheduleLines)[i].ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit = confirmedOrderQuantityByPDTAvailCheckInBaseUnit
+		(*itemScheduleLines)[i].IsCancelled = input.Header.IsCancelled
+		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": (*itemScheduleLines)[i], "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
 		if err != nil {
 			err = xerrors.Errorf("rmq error: %w", err)
 			log.Error("%+v", err)
@@ -166,24 +166,24 @@ func (c *DPFMAPICaller) headerCancel(
 		}
 	}
 
-	return header, items, schedules, &productStocks
+	return header, items, itemScheduleLines, &productStocks
 }
 
 func (c *DPFMAPICaller) itemCancel(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-) (*[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ScheduleLine, *[]dpfm_api_output_formatter.ProductStock) {
+) (*[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ItemScheduleLine, *[]dpfm_api_output_formatter.ProductStock) {
 	sessionID := input.RuntimeSessionID
-	schedules := c.ScheduleLineRead(input, log)
-	item := input.Orders.Item[0]
+	itemScheduleLines := c.ItemScheduleLineRead(input, log)
+	item := input.Header.Item[0]
 	productStocks := make([]dpfm_api_output_formatter.ProductStock, 0)
-	for _, v := range *schedules {
+	for _, v := range *itemScheduleLines {
 		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := float32(0)
 		productStock := new(dpfm_api_output_formatter.ProductStock)
 		ordersCancel := false
-		if input.Orders.IsCancelled != nil {
-			ordersCancel = *input.Orders.IsCancelled
+		if input.Header.IsCancelled != nil {
+			ordersCancel = *input.Header.IsCancelled
 		}
 		if ordersCancel {
 			productStock, confirmedOrderQuantityByPDTAvailCheckInBaseUnit = c.releaseInventoryReservation(input, output, v, log)
@@ -209,9 +209,9 @@ func (c *DPFMAPICaller) itemCancel(
 	}
 
 	items := make([]dpfm_api_output_formatter.Item, 0)
-	for _, v := range input.Orders.Item {
+	for _, v := range input.Header.Item {
 		data := dpfm_api_output_formatter.Item{
-			OrderID:            input.Orders.OrderID,
+			OrderID:            input.Header.OrderID,
 			OrderItem:          v.OrderItem,
 			ItemDeliveryStatus: nil,
 			IsCancelled:        v.IsCancelled,
@@ -231,9 +231,9 @@ func (c *DPFMAPICaller) itemCancel(
 	}
 
 	// itemがキャンセル取り消しされた場合、headerのキャンセルも取り消す
-	if !*input.Orders.Item[0].IsCancelled {
+	if !*input.Header.Item[0].IsCancelled {
 		header := c.HeaderRead(input, log)
-		header.IsCancelled = input.Orders.Item[0].IsCancelled
+		header.IsCancelled = input.Header.Item[0].IsCancelled
 		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": header, "function": "OrdersHeader", "runtime_session_id": sessionID})
 		if err != nil {
 			err = xerrors.Errorf("rmq error: %w", err)
@@ -248,23 +248,23 @@ func (c *DPFMAPICaller) itemCancel(
 		}
 	}
 
-	return &items, schedules, &productStocks
+	return &items, itemScheduleLines, &productStocks
 }
 
-func (c *DPFMAPICaller) scheduleCancel(
+func (c *DPFMAPICaller) itemScheduleLineCancel(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-) *[]dpfm_api_output_formatter.ScheduleLine {
+) *[]dpfm_api_output_formatter.ItemScheduleLine {
 	sessionID := input.RuntimeSessionID
-	schedules := make([]dpfm_api_output_formatter.ScheduleLine, 0)
-	for _, item := range input.Orders.Item {
-		for _, schedule := range item.ItemSchedulingLine {
-			data := dpfm_api_output_formatter.ScheduleLine{
-				OrderID:      input.Orders.OrderID,
+	itemScheduleLines := make([]dpfm_api_output_formatter.ItemScheduleLine, 0)
+	for _, item := range input.Header.Item {
+		for _, itemScheduleLine := range item.ItemSchedulingLine {
+			data := dpfm_api_output_formatter.ItemScheduleLine{
+				OrderID:      input.Header.OrderID,
 				OrderItem:    item.OrderItem,
-				ScheduleLine: schedule.ScheduleLine,
-				IsCancelled:  schedule.IsCancelled,
+				ScheduleLine: itemScheduleLine.ScheduleLine,
+				IsCancelled:  itemScheduleLine.IsCancelled,
 			}
 
 			res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": data, "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
@@ -279,24 +279,24 @@ func (c *DPFMAPICaller) scheduleCancel(
 				output.SQLUpdateError = "Order Item Schedule Line Data cannot cancel"
 				return nil
 			}
-			schedules = append(schedules, data)
+			itemScheduleLines = append(itemScheduleLines, data)
 		}
 	}
-	return &schedules
+	return &itemScheduleLines
 }
 
 func (c *DPFMAPICaller) releaseInventoryReservation(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
-	schedule dpfm_api_output_formatter.ScheduleLine,
+	itemScheduleLine dpfm_api_output_formatter.ItemScheduleLine,
 	log *logger.Logger,
 ) (*dpfm_api_output_formatter.ProductStock, float32) {
 	sessionID := input.RuntimeSessionID
 
-	if schedule.StockConfirmationPlantBatch == nil {
-		productStock := c.ProductStockAvailabilityRead(schedule, log)
+	if itemScheduleLine.StockConfirmationPlantBatch == nil {
+		productStock := c.ProductStockAvailabilityRead(itemScheduleLine, log)
 		availableProductStock := productStock.AvailableProductStock
-		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := schedule.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
+		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := itemScheduleLine.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
 		recalculatedAvailableProductStock := availableProductStock + confirmedOrderQuantityByPDTAvailCheckInBaseUnit
 
 		data := dpfm_api_output_formatter.ProductStock{
@@ -322,9 +322,9 @@ func (c *DPFMAPICaller) releaseInventoryReservation(
 
 		return &data, 0
 	} else {
-		productStock := c.ProductStockAvailabilityByBatchRead(schedule, log)
+		productStock := c.ProductStockAvailabilityByBatchRead(itemScheduleLine, log)
 		availableProductStock := productStock.AvailableProductStock
-		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := schedule.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
+		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := itemScheduleLine.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
 		recalculatedAvailableProductStock := availableProductStock + confirmedOrderQuantityByPDTAvailCheckInBaseUnit
 
 		data := dpfm_api_output_formatter.ProductStock{
@@ -356,15 +356,15 @@ func (c *DPFMAPICaller) releaseInventoryReservation(
 func (c *DPFMAPICaller) inventoryReservation(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
-	schedule dpfm_api_output_formatter.ScheduleLine,
+	itemScheduleLine dpfm_api_output_formatter.ItemScheduleLine,
 	log *logger.Logger,
 ) (*dpfm_api_output_formatter.ProductStock, float32) {
 	sessionID := input.RuntimeSessionID
 
-	if schedule.StockConfirmationPlantBatch == nil {
-		productStock := c.ProductStockAvailabilityRead(schedule, log)
+	if itemScheduleLine.StockConfirmationPlantBatch == nil {
+		productStock := c.ProductStockAvailabilityRead(itemScheduleLine, log)
 		availableProductStock := productStock.AvailableProductStock
-		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := schedule.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
+		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := itemScheduleLine.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
 		recalculatedAvailableProductStock := float32(0)
 		if availableProductStock >= confirmedOrderQuantityByPDTAvailCheckInBaseUnit {
 			recalculatedAvailableProductStock = availableProductStock - confirmedOrderQuantityByPDTAvailCheckInBaseUnit
@@ -397,9 +397,9 @@ func (c *DPFMAPICaller) inventoryReservation(
 
 		return &data, availableProductStock
 	} else {
-		productStock := c.ProductStockAvailabilityByBatchRead(schedule, log)
+		productStock := c.ProductStockAvailabilityByBatchRead(itemScheduleLine, log)
 		availableProductStock := productStock.AvailableProductStock
-		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := schedule.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
+		confirmedOrderQuantityByPDTAvailCheckInBaseUnit := itemScheduleLine.ConfirmedOrderQuantityByPDTAvailCheckInBaseUnit
 		recalculatedAvailableProductStock := float32(0)
 		if availableProductStock >= confirmedOrderQuantityByPDTAvailCheckInBaseUnit {
 			recalculatedAvailableProductStock = availableProductStock - confirmedOrderQuantityByPDTAvailCheckInBaseUnit
